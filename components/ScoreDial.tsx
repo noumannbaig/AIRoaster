@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { animate, motion } from "framer-motion";
 
 export function ScoreDial({ score, label }: { score: number; label: string }) {
-  const [display, setDisplay] = useState(0);
+  // Seeded with the real score so server-rendered HTML (and any client where
+  // the animation never runs) still shows the correct number.
+  const [display, setDisplay] = useState(score);
 
   useEffect(() => {
     const controls = animate(0, score, {

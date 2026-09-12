@@ -58,6 +58,9 @@
 
 html {
   scroll-behavior: smooth;
+  /* `clip` rather than `hidden` so the oversized decorative glows can't cause
+     horizontal scrolling on narrow screens without breaking the sticky navbar. */
+  overflow-x: clip;
 }
 
 body {
@@ -65,7 +68,7 @@ body {
   color: var(--color-chalk);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Ambient grain — keeps large flat dark areas from looking like a cheap template. */
