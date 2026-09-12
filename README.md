@@ -247,16 +247,23 @@ Every upload is validated server-side by **sniffing magic bytes** — the
 browser-supplied MIME type is never trusted. Only PNG, JPEG and WEBP are
 accepted, at most 5 files, 5 MB each.
 
-Screenshots are deleted after `UPLOAD_RETENTION_HOURS`. Wire the cleanup to a
-schedule with `vercel.json`:
+Screenshots are deleted after `UPLOAD_RETENTION_HOURS`. The cleanup schedule
+lives in `vercel.json`:
 
 ```json
 {
-  "crons": [{ "path": "/api/cron/cleanup-uploads", "schedule": "0 * * * *" }]
+  "crons": [{ "path": "/api/cron/cleanup-uploads", "schedule": "0 3 * * *" }]
 }
 ```
 
 The endpoint requires `Authorization: Bearer $ADMIN_SECRET`.
+
+The schedule is daily because Vercel's Hobby plan rejects any cron that fires
+more than once per day. A sweep only deletes images already older than
+`UPLOAD_RETENTION_HOURS`, so with daily runs a file can outlive its retention
+window by up to 24 hours before the next sweep collects it. If you need the
+window enforced tightly, either lower `UPLOAD_RETENTION_HOURS`, move to the Pro
+plan and use `0 * * * *`, or drive the endpoint from an external scheduler.
 
 > Note: when `STORAGE_PROVIDER=local`, uploaded screenshots live on
 > `localhost`, which OpenAI cannot fetch. Vision analysis therefore only kicks
