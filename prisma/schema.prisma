@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoastStatus {
+  PENDING
+  GENERATING
+  READY
+  FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  sessions RoastSession[]
+}
+
+model RoastSession {
+  id           String      @id @default(cuid())
+  sessionToken String
+  subjectType  String
+  inputText    String      @db.Text
+  imageUrls    Json        @default("[]")
+  roastLevel   String
+  categories   Json        @default("[]")
+  status       RoastStatus @default(PENDING)
+  isPaid       Boolean     @default(false)
+  failureCode  String?
+  ipHash       String?
+  userId       String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  user     User?         @relation(fields: [userId], references: [id])
+  result   RoastResult?
+  payments Payment[]
+  shares   Share[]
+  events   AnalyticsEvent[]
+
+  @@index([sessionToken])
+  @@index([createdAt])
+}
+
+/// Free fields are always populated. Premium fields are only populated once the
+/// session has been marked paid by a verified Lemon Squeezy webhook.
+model RoastResult {
+  id                  String   @id @default(cuid())
+  sessionId           String   @unique
+  overallScore        Int
+  headline            String   @db.Text
+  summary             String   @db.Text
+  roast               String   @db.Text
+  redFlags            Json     @default("[]")
+  greenFlags          Json     @default("[]")
+  mainCharacterEnergy String   @db.Text
+  shareableQuote      String   @db.Text
+  lockedSections      Json     @default("[]")
+  // Premium payload — withheld from the API response until isPaid is true.
+  premiumRedFlags     Json     @default("[]")
+  premiumGreenFlags   Json     @default("[]")
+  brutalSummary       String?  @db.Text
+  careerRoast         String?  @db.Text
+  moneyRoast          String?  @db.Text
+  socialRoast         String?  @db.Text
+  datingRoast         String?  @db.Text
+  mainCharacterArc    String?  @db.Text
+  selfSabotage        String?  @db.Text
+  friendsWouldRoast   Json     @default("[]")
+  finalVerdict        String?  @db.Text
+  premiumGeneratedAt  DateTime?
+  model               String
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  session RoastSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  sessionId         String
+  provider          String
+  providerOrderId   String
+  providerPaymentId String?
+  providerEventId   String?
+  product           String
+  amount            Int
+  currency          String
+  status            PaymentStatus @default(PENDING)
+  createdAt         DateTime      @default(now())
+
+  session RoastSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  // Duplicate webhook deliveries for the same order must not fulfil twice.
+  @@unique([provider, providerOrderId])
+  @@index([sessionId])
+}
+
+model Share {
+  id          String   @id @default(cuid())
+  sessionId   String
+  shareToken  String   @unique
+  clicks      Int      @default(0)
+  downloads   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  session RoastSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+model EmailCapture {
+  id        String   @id @default(cuid())
+  email     String
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  @@unique([email, sessionId])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  name      String
+  sessionId String?
+  props     Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  session RoastSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([name])
+  @@index([createdAt])
+}
+
+model RateLimitHit {
+  id        String   @id @default(cuid())
+  bucket    String
+  key       String
+  createdAt DateTime @default(now())
+
+  @@index([bucket, key, createdAt])
+}
+
+model UploadedImage {
+  id        String   @id @default(cuid())
+  url       String
+  pathname  String
+  provider  String
+  bytes     Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
