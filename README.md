@@ -370,15 +370,27 @@ leaked before payment.
    be your real domain with no trailing slash.
 4. **Add a Blob store** (Storage → Create → Blob) and set
    `STORAGE_PROVIDER=vercel-blob`.
-5. **Run migrations against production** once:
+5. **Migrations run during the build.** `vercel.json` sets the build command to
+   `prisma migrate deploy && prisma generate && next build`, so each deploy
+   applies any pending migrations before building. `migrate deploy` is
+   idempotent — it applies only what's outstanding and is a no-op when the
+   database is current. `DATABASE_URL` must therefore be readable at *build*
+   time, not just at runtime.
+
+   To apply them by hand instead, drop `buildCommand` from `vercel.json` and run:
    ```bash
    DATABASE_URL="<production-url>" npm run db:deploy
    ```
-   Or set the build command to `prisma migrate deploy && next build` if you'd
-   rather migrate on every deploy.
+
+   > If migrations fail against a pooled connection string, run them against the
+   > provider's **direct** URL instead. Neon and Supabase front their pooled
+   > endpoints with PgBouncer in transaction mode, which can't execute the DDL
+   > and advisory locks migrations need. Keep the pooled URL in `DATABASE_URL`
+   > for the app; use the direct URL only for migrating.
 6. **Point the Lemon Squeezy webhook** at
    `https://your-domain.com/api/webhooks/lemon-squeezy`.
-7. **Add the cleanup cron** via `vercel.json` as shown above.
+7. The cleanup cron is already registered in `vercel.json`; just set
+   `ADMIN_SECRET` so it can authenticate.
 8. Deploy, then walk the funnel once with a Lemon Squeezy test payment.
 
 `maxDuration` is set to 120s on the roast routes. On Vercel's Hobby plan the
