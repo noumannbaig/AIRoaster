@@ -29,8 +29,10 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(pathname: string): Promise<void> {
-    const target = path.join(UPLOAD_DIR, pathname);
-    if (!target.startsWith(UPLOAD_DIR)) return;
+    const target = path.resolve(UPLOAD_DIR, pathname);
+    const relative = path.relative(UPLOAD_DIR, target);
+    // Windows-safe traversal check: `startsWith` fails across mixed slashes.
+    if (relative.startsWith("..") || path.isAbsolute(relative)) return;
     await unlink(target).catch(() => undefined);
   }
 }

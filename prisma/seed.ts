@@ -3,9 +3,15 @@
  * share link) so a fresh database has something to look at in /admin and a
  * working /share/... link to click. Safe to run repeatedly.
  */
+import { config as loadEnv } from "dotenv";
 import { PrismaClient } from "../lib/generated/prisma";
 import { buildFixtureRoast } from "../lib/ai/fixtures";
 import { aiRoastToResultData, newShareToken, newSessionToken } from "../lib/roast/service";
+
+// Prisma CLI loads `.env`; `tsx prisma/seed.ts` does not. Load both so local
+// `.env.local` (Next.js) and `.env` (Prisma) work the same way.
+loadEnv({ path: ".env" });
+loadEnv({ path: ".env.local", override: true });
 
 const prisma = new PrismaClient();
 
